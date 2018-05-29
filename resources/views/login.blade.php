@@ -7,21 +7,22 @@
 		<title></title>
 		<script src="js/mui.min.js"></script>
 		<link href="css/mui.min.css" rel="stylesheet" />
+		<link rel="stylesheet" type="text/css" href="../css/app.css" />
 		<script type="text/javascript" charset="utf-8">
 			mui.init();
 		</script>
 		<style>
 			body {
-				background-image: url("http://jonvilma.com/images/house-7.jpg");
+				background-image: url("https://public47.com/wp-content/uploads/2016/03/img_cap05-600x800.jpg");
 				/* Full height */
-				height: 150vh;
+				height: 100vh;
 				overflow: hidden;
 				/* Center and scale the image nicely */
 				background-position: center;
 				background-repeat: no-repeat;
 				background-size: cover;
 			}
-			
+
 			.mui-input-row {
 				margin: 10px 0;
 				width: 100%;
@@ -76,42 +77,26 @@
 		</header>
 		<div class="mui-content mui-text-center" style="background: transparent;color:white;margin:0 50px;">
 
-			<img style="width:100%;margin:60px 0px 30px 0px" src="https://beimei.online/log-200.png">
+			<img style="width:100%;margin:60px 0px 30px 0px" src="https://static.wixstatic.com/media/1da006_55b6d2136ae945e58b7b3c614253450b~mv2.png/v1/fill/w_258,h_64,al_c/1da006_55b6d2136ae945e58b7b3c614253450b~mv2.png">
 
+	
+
+			<form action="/auth/login" method="post" accept-charset="UTF-8">
+									{!! csrf_field() !!}
+						<div class="mui-input-row">
+							<label><span class="mui-icon mui-icon-person"></span></label>
+							<input type="text" class="mui-input-clear" name="email" placeholder="带清除按钮的输入框">
+						</div>
+						<div class="mui-input-row">
+							<label><span class="mui-icon mui-icon-locked"></span></label>
+							<input type="password" class="mui-input-clear" name="password" placeholder="带清除按钮的输入框">
+						</div>
+						<button  type="submit" style="width:100%;color:white;background:#EB482F;border-color: #EB482F;" class="mui-btn mui-btn-blue">Login</button>
+			</form>
 			<button type="button" style="width:100%;margin:30px 0px 30px 0px" class="mui-btn mui-btn-blue">Register</button>
-			<div style="margin:10px 0">————— OR —————</div>
-<form action="/auth/login" method="post" accept-charset="UTF-8">
-                          {!! csrf_field() !!}
-			<div class="mui-input-row">
-				<label><span class="mui-icon mui-icon-person"></span></label>
-				<input type="text" class="mui-input-clear" name="email" placeholder="带清除按钮的输入框">
-			</div>
-			<div class="mui-input-row">
-				<label><span class="mui-icon mui-icon-locked"></span></label>
-				<input type="password" class="mui-input-clear" name="password" placeholder="带清除按钮的输入框">
-			</div>
-  <button  type="submit" style="width:100%;color:white;border-color: white;" class="mui-btn mui-btn-blue mui-btn-outlined">Login</button>
- </form>
-			
 
 			<p></p>
 		</div>
-    
-      <script type="text/javascript">
-  
-  @if(isset($error))
-    alert("{{$error}}");
-  @endif
-
-  @if(Session::has('error'))
-    alert("{{Session::get('error')}}");
-  @endif
-
-  @if(Session::has('message'))
-    alert("{{Session::get('message')}}");
-  @endif
-
-  </script>
 	</body>
 
 </html>

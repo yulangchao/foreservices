@@ -123,15 +123,15 @@
   <script type="text/javascript">
   
   @if(isset($error))
-    alert("{{$error}}");
+    mui.toast("{{$error}}");
   @endif
 
   @if(Session::has('error'))
-    alert("{{Session::get('error')}}");
+    mui.toast("{{Session::get('error')}}");
   @endif
 
   @if(Session::has('message'))
-    alert("{{Session::get('message')}}");
+    mui.toast("{{Session::get('message')}}");
   @endif
 
   </script>

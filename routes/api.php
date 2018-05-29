@@ -25,6 +25,10 @@ Route::group(['namespace' => 'api'], function () {
     Route::post('/sendcode', 'UserController@sendcode');
     Route::post('/forgetPassword', 'UserController@forgetPassword');
     Route::post('/test1', 'UserController@test1');
+    Route::post('/getCleanerList', 'OrderController@getCleanerList');
+    Route::post('/getCleanerListByOrder', 'OrderController@getCleanerListByOrder');
+    Route::post('/getOrdererList', 'OrderController@getOrdererList');
+    Route::post('/upload', 'FileController@test');
 });
 
 Route::group(['middleware' => 'auth:api', 'namespace' => 'api'], function() {

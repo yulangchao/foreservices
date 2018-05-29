@@ -52,7 +52,14 @@
       .mui-content>.mui-table-view:first-child {
           margin-top: 0px;
          padding-top: 15px;
-      }
+	  }
+	  .mui-card{
+		  margin-bottom: 0px;
+		  margin-top:15px;
+	  }
+	  .mui-table-view{
+		  padding-bottom: 20px;
+	  }
 		</style>
 
 	</head>
@@ -78,29 +85,34 @@
 		</nav>
 		<div class="mui-content">
 			<ul class="mui-table-view  mui-text-center">
-				<li class="">
-					<a href="javascript:;">
-						<img class="" style="width:90vw;border-radius:10px" src="http://placehold.it/300x100">
+					<div class="mui-card">
+						<a href="/serviceform?type=1">
+							<div class="mui-card-header mui-card-media" style="height:150px;background-image:url(http://via.placeholder.com/300X150)"></div>
+							<div class="mui-card-content">
+								<div class="mui-card-content-inner">
+									<h3>Service1</h3>
+								</div>
+							</div>
+						</a>
+					</div>
+					<div class="mui-card">
+							<div class="mui-card-header mui-card-media" style="height:150px;background-image:url(http://via.placeholder.com/300X150)"></div>
+							<div class="mui-card-content">
+								<div class="mui-card-content-inner">
+									<h3>Service2</h3>
+								</div>
+							</div>
+					</div>
+					<div class="mui-card">
+							<div class="mui-card-header mui-card-media" style="height:150px;background-image:url(http://via.placeholder.com/300X150)"></div>
+							<div class="mui-card-content">
+								<div class="mui-card-content-inner">
+									<h3>Service3</h3>
+								</div>
+							</div>
+					</div>
+					
 
-					</a>
-				</li>
-        				<li class="">
-					<a href="javascript:;">
-						<img class="" style="width:90vw;border-radius:10px" src="http://placehold.it/300x100">
-
-					</a>
-				</li>
-        				<li class="">
-					<a href="javascript:;">
-						<img class="" style="width:90vw;border-radius:10px" src="http://placehold.it/300x100">
-
-					</a>
-				</li>				<li class="">
-					<a href="javascript:;">
-						<img class="" style="width:90vw;border-radius:10px" src="http://placehold.it/300x100">
-
-					</a>
-				</li>
 			</ul>
 		</div>
 	</body>
@@ -114,15 +126,15 @@
   <script type="text/javascript">
   
   @if(isset($error))
-    alert("{{$error}}");
+    mui.toast("{{$error}}");
   @endif
 
   @if(Session::has('error'))
-    alert("{{Session::get('error')}}");
+    mui.toast("{{Session::get('error')}}");
   @endif
 
   @if(Session::has('message'))
-    alert("{{Session::get('message')}}");
+    mui.toast("{{Session::get('message')}}");
   @endif
 
   </script>

@@ -9,7 +9,7 @@
 | routes are loaded by the RouteServiceProvider within a group which
 | contains the "web" middleware group. Now create something great!
 |
-*/
+ */
 
 Route::get('/', 'UserController@checkLogin');
 
@@ -21,16 +21,24 @@ Route::group(['prefix' => 'admin'], function () {
     Voyager::routes();
 });
 
-Route::group(['middleware' => 'auth:web'], function() {
-  Route::get('/services', function () {
-      return view('services');
-  });
+Route::group(['middleware' => 'auth:web'], function () {
+    Route::get('/services', function () {
+        return view('services');
+    });
     Route::get('/orders', function () {
-      return view('orders');
-  });
+        return view('orders');
+    });
     Route::get('/settings', function () {
-      return view('settings');
-  });
-  Route::get('/logout','UserController@getLogout' );
+        return view('settings');
+    });
+    Route::get('/serviceform', 'OrderController@getOrderForm');
+
+    Route::get('/selectCleaner','OrderController@selectCleaner')->name('selectcleaner');
+
+    Route::post('/createOrder','OrderController@createOrder');
+
+    Route::get('/logout', 'UserController@getLogout');
+
+    Route::get('/getMore', 'OrderController@getMore');
 
 });
