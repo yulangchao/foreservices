@@ -21,20 +21,25 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 Route::group(['namespace' => 'api'], function () {
     Route::post('/checkPhone', 'UserController@checkPhone');
     Route::post('/login', 'UserController@login');
-    Route::post('/register', 'UserController@register');
+  
+  
+    Route::post('/getAccessCode', 'UserController@getAccessCode');
+  
+  
     Route::post('/sendcode', 'UserController@sendcode');
     Route::post('/forgetPassword', 'UserController@forgetPassword');
     Route::post('/test1', 'UserController@test1');
     Route::post('/getCleanerList', 'OrderController@getCleanerList');
     Route::post('/getCleanerListByOrder', 'OrderController@getCleanerListByOrder');
-    Route::post('/getOrdererList', 'OrderController@getOrdererList');
+    
+
     Route::post('/upload', 'FileController@test');
 });
 
 Route::group(['middleware' => 'auth:api', 'namespace' => 'api'], function() {
-  
-    Route::post('/resetPassword', 'UserController@resetPassword');
-    Route::post('/logout', 'UserController@logout');
+    Route::post('/getOrdererList', 'OrderController@getOrdererList');
+    Route::post('/createOrder', 'OrderController@createOrder');
+    Route::post('/postPayment', 'PaymentController@postPayment');
     Route::post('/details', 'UserController@details');
 
 });

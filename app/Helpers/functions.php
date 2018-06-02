@@ -6,8 +6,20 @@ function test()
 }
 
 
-function calculateHours()
+function calculateHours($type,$bedroom,$additional)
 {
-    return 3;
+    if ($type == 1){
+      
+    }
+    return $bedroom;
+}
+
+function getTimeFromMinutes($time){
+  $min = $time%60;
+  $hour = floor($time/60);
+  if($min<10){
+    $min = "0".$min;
+  }
+  return $hour.":".$min;
 }
 ?>
