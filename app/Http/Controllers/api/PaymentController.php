@@ -11,27 +11,33 @@ use App\User;
 use Stripe\Error\Card;
 use Cartalyst\Stripe\Stripe;
 use App\Http\Controllers\Controller;
+use App\Order;
+use App\Payment;
+use Illuminate\Support\Facades\Auth;
 class PaymentController extends Controller
 {
 public function postPayment()
  {
      $data = json_decode(request()->getContent(), true);
-
+     $order = Order::where(["user_id" => Auth::user()->id, "id"=>$data['order_id']])->first();
+     
      if (1) { 
          try{
                  $stripe = Stripe::make("sk_test_p1CeaBzazLEji0gufAM72v1d");
                  $charge = $stripe->charges()->create([
                    "card" => $data["token"],
                    "currency" => "cad",
-                   "amount" => 50,
+                   "amount" => $order["price"] + $order["agent_fee"] ,
                    "description" => "Add in wallet",
                  ]);
-
+                 
                  if($charge["status"] == "succeeded") {
                  /**
                  * Write Here Your Database insert logic.
-                 */
-                    return response()->json(['success'=> true, 'message' => "支付成功, 支付金额".($charge['amount']/100)." ".strtoupper($charge['currency'])."."]); 
+                 */$order->order_status = 3;
+                   $order->save();
+                   Payment::create(['amount'=>($charge['amount']/100),'order_id'=>$data['order_id'],'payment_number'=>$charge["id"]]);
+                    return response()->json(['success'=> true,'charge'=>$charge,'message' => "支付成功, 支付金额".($charge['amount']/100)." ".strtoupper($charge['currency'])."."]); 
                  } else {
 
                  return response()->json(['success'=> false,"error"=>"Money not add in wallet!!"]); 
@@ -61,7 +67,7 @@ public function postPaymentWithStripe(Request $request)
      $input = $request->all();
      if ($validator->passes()) { 
          $input = array_except($input,array("_token"));
-         $stripe = Stripe::make("sk_test_p1CeaBzazLEji0gufAM72v1d");
+         $stripe = Stripe::make("sk_test_JG33GZrsKjIFGHhYcolZD8w8");
          try {
          $token = $stripe->tokens()->create([
            "card" => [

@@ -5,9 +5,9 @@ namespace App;
 use Illuminate\Database\Eloquent\Model;
 
 
-class CleanerSchedule extends Model
+class Payment extends Model
 {
     protected $fillable = [
-       'start', 'end','active'
+        'order_id','amount','payment_number'
     ];
 }

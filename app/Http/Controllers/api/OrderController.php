@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Input;
 use Validator;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Twilio;
 
 class OrderController extends Controller
 {
@@ -29,13 +30,21 @@ class OrderController extends Controller
         $data['user_id'] = Auth::user()->id;
         if ($data['selected_cleaners'][0] == -1){
           $data['order_status'] = 2;
-          $data['cleaner_id'] = -1;
+          $data['cleaner_id'] = 6;
+          $data['price'] = $data['hours']*30;
         }
         $order = Order::create($data);
+        
         if ($order){
-          foreach ($data['selected_cleaners'] as &$value) {
-              $response = ['cleaner_id' => $value, 'order_id' => $order->id];
-              ServiceResponse::create($response);
+          if ($data['selected_cleaners'][0] != -1){
+            foreach ($data['selected_cleaners'] as &$value) {
+                $response = ['cleaner_id' => $value, 'order_id' => $order->id];
+                ServiceResponse::create($response);
+                sendSMS(getPhoneFromCleaner($value), '你有新的订单，请注意查收');
+            }
+          }else{
+            
+            sendSMS("6047195215", '你有新的vip订单，请注意查收');
           }
           
           return response()->json(['success'=> true, 'message'=> '订单创建成功！等待Cleaner回复！']);
@@ -47,9 +56,11 @@ class OrderController extends Controller
     public function getOrdererList(Request $request){
         
         $data = json_decode(request()->getContent(), true);
-        $orders = Order::where(["user_id" => Auth::user()->id])->whereIn('order_status',$data['status'])->orderBy('created_at', 'desc')
+        $orders = Order::where(["user_id" => Auth::user()->id])->whereIn('order_status',$data['status'])->orderBy('id', 'desc')
                   ->offset($data['offset'])->limit(10)->get();
-
+        foreach ($orders as &$order) {
+            $order['additional'] = json_decode($order['additional']);
+        }
         return response()->json(['success'=> true, 'orders'=> $orders, "user" => Auth::user()->id]);
     }
 
@@ -57,8 +68,19 @@ class OrderController extends Controller
 //提取所有技工
     public function getCleanerList(Request $request){
         $data = json_decode(request()->getContent(), true);
-
-        $cleaners = Cleaner::where([])->orderBy('created_at', 'desc')->get();
+        $where = [];
+        if (!empty($data['cleaner_id'])){
+          $where['id'] = $data['cleaner_id'];
+        }
+        if (!empty($data['city']) && $data['city'] > 0){
+          $where['city'] = $data['city'];
+        }
+        if (!empty($data['price']) && $data['price'] > 0){
+          $cleaners = Cleaner::where($where)->whereNotNull('city')->whereBetween('pay_rate', [5+5*$data['price'], 10+5*$data['price']])->orderBy('if_vip', 'desc')->orderBy('rate', 'desc')->get();
+        }else{
+          $cleaners = Cleaner::where($where)->whereNotNull('city')->orderBy('if_vip', 'desc')->orderBy('rate', 'desc')->get();
+        }
+        
 
         return response()->json(['success'=> true, 'cleaners'=> $cleaners]);
     }
@@ -76,7 +98,7 @@ class OrderController extends Controller
         $date = explode(" ",$data['time'])[0];
 //         dd($date,$start_time,$end_time,$start_hour,$end_hour);
 
-        $query = 'select c.id, c.name,c.sex,c.city,c.rate,c.avatar from cleaners c where c.id in (select cs.cleaner_id from cleaner_schedules cs '.
+        $query = 'select c.id, c.name,c.sex,c.city,c.rate, c.pay_rate ,c.avatar from cleaners c where c.id in (select cs.cleaner_id from cleaner_schedules cs '.
         'left join (SELECT cleaner_id, 1 as conflict FROM orders o WHERE o.order_type >1 and '.
         'LEFT(o.time, 10) = "'.$date.'" and ("'.$start_time.'" BETWEEN o.start_time and o.end_time || "'.$end_time.'" BETWEEN o.start_time and o.end_time) '.
         'group by cleaner_id) temp on temp.cleaner_id = cs.cleaner_id where active = 1 and day = '.$data['day'].' and conflict is null and '.(string)$start_hour.' BETWEEN cs.start and cs.end and '.(string)$end_hour.' BETWEEN cs.start and cs.end) '.
@@ -86,7 +108,61 @@ class OrderController extends Controller
       
         return response()->json(['success'=> true, 'cleaners'=> $cleaners]);
     }
-    
+  
+    //提取响应cleaners
+    public function getResponseList(Request $request){
+        
+        $data = json_decode(request()->getContent(), true);
+        $query = 'SELECT * FROM service_responses sr left join cleaners c on sr.cleaner_id = c.id where order_id = '.$data['order_id'];
+        $cleaners = \DB::select($query);
+
+        return response()->json(['success'=> true, 'cleaners'=> $cleaners]);
+    }
+  
+  //改变订单时间
+    public function changeOrderTime(Request $request){
+        
+        $data = json_decode(request()->getContent(), true);
+        $order = Order::where(["user_id" => Auth::user()->id, "id"=>$data['order_id']])->first();
+        $order->order_status = 4;
+        $order->if_changed = 1;
+        $order->time = $data['time'];
+        $order->save();
+        if ($order){
+          sendSMS("6047195215", '您的订单时间改变，请及时查看确认！');
+        }
+        return response()->json(['success'=> true]);
+    }
+  
+  //改变订单时间
+    public function cancelOrder(Request $request){
+
+        $data = json_decode(request()->getContent(), true);
+        $order = Order::where(["user_id" => Auth::user()->id, "id"=>$data['order_id']])->first();
+        if ($order['order_status']==3 || $order['order_status']==4){
+          //取消并且退款
+          $order->order_status = 8;
+        }else{
+          //取消
+          $order->order_status = 7;
+        }
+        
+        $order->cancel_reason = $data['cancel_reason'];
+        $order->cancel_time = date("Y-m-d H:i");
+        $order->save();
+        if ($order){
+
+          if ($order['order_status']==3 || $order['order_status']==4){
+            //取消并且退款
+            sendSMS("6047195215", '此订单已经取消！需要退款!');
+          }else{
+            //取消
+            sendSMS("6047195215", '此订单已经取消！');
+          }
+          
+        }
+        return response()->json(['success'=> true]);
+    }
     public function getMore(){
         return response()->json(['success'=> false, 'message'=> '修改密码失败，请稍后再试']);
     }
