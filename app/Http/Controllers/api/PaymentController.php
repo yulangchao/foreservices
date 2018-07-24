@@ -12,6 +12,7 @@ use Stripe\Error\Card;
 use Cartalyst\Stripe\Stripe;
 use App\Http\Controllers\Controller;
 use App\Order;
+use App\Cleaner;
 use App\Payment;
 use Illuminate\Support\Facades\Auth;
 class PaymentController extends Controller
@@ -23,7 +24,7 @@ public function postPayment()
      
      if (1) { 
          try{
-                 $stripe = Stripe::make("sk_test_p1CeaBzazLEji0gufAM72v1d");
+                 $stripe = Stripe::make("sk_test_JG33GZrsKjIFGHhYcolZD8w8");
                  $charge = $stripe->charges()->create([
                    "card" => $data["token"],
                    "currency" => "cad",
@@ -37,6 +38,7 @@ public function postPayment()
                  */$order->order_status = 3;
                    $order->save();
                    Payment::create(['amount'=>($charge['amount']/100),'order_id'=>$data['order_id'],'payment_number'=>$charge["id"]]);
+                   sendSMS(getPhoneFromCleaner($order['cleaner_id']), '您有订单已支付，请注意安排时间！');
                     return response()->json(['success'=> true,'charge'=>$charge,'message' => "支付成功, 支付金额".($charge['amount']/100)." ".strtoupper($charge['currency'])."."]); 
                  } else {
 

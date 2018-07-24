@@ -8,9 +8,9 @@ class Cleaner extends Model
 {
     //
     protected $fillable = [
-       'name', 'phone','user_id','email'
+       'name', 'phone','user_id','email','avatar','pay_rate','city','sex','lat','lng','address'
     ];
     protected $hidden = [
-        'phone'
+        'phone','lat','lng','address'
     ];
 }

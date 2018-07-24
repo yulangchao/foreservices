@@ -16,7 +16,7 @@ class User extends \TCG\Voyager\Models\User
      * @var array
      */
     protected $fillable = [
-        'name', 'email','phone','type', 'firebase_token','password'
+        'name', 'email','phone','type', 'firebase_token','password','rate'
     ];
 
     /**
@@ -25,7 +25,7 @@ class User extends \TCG\Voyager\Models\User
      * @var array
      */
     protected $hidden = [
-        'password', 'remember_token','role_id','id'
+        'password', 'remember_token','role_id'
     ];
   
     public function AauthAcessToken(){

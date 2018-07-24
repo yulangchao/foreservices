@@ -5,8 +5,15 @@
 use Illuminate\Support\Facades\DB;
 use Twilio;
 use App\SmsRecord;
+use App\CleanerReview;
 
 function test()
+{
+    return "1234";
+}
+
+
+function calculateRate()
 {
     return "1234";
 }
@@ -26,6 +33,10 @@ function getTimeFromMinutes($time){
   if($min<10){
     $min = "0".$min;
   }
+  if($hour<10){
+    $hour = "0".$hour;
+  }
+
   return $hour.":".$min;
 }
 
