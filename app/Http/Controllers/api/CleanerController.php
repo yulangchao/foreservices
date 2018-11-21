@@ -20,10 +20,12 @@ use App\WiiPayment;
 class CleanerController extends Controller
 {
    //获取人物review
+  
+  
     public function getReviewForCleaner(Request $request){
         
         $data = json_decode(request()->getContent(), true);
-        $query = 'SELECT cr.*, u.name, u.avatar FROM cleaner_reviews cr left join users u on u.id = cr.user_id where cleaner_id = '.$data['cleaner_id'].' limit 10 OFFSET '. $data['offset'];
+        $query = 'SELECT cr.*, u.name, u.avatar FROM cleaner_reviews cr left join users u on u.id = cr.user_id where cleaner_id = '.$data['cleaner_id'].' order by created_at desc limit 10 OFFSET '. $data['offset'];
         $reviews = \DB::select($query);
 
         return response()->json(['success'=> true, 'reviews'=> $reviews]);
@@ -61,7 +63,7 @@ class CleanerController extends Controller
         
         $data = json_decode(request()->getContent(), true);
         $cleaner = Cleaner::where(["user_id" => Auth::user()->id])->first();
-        $query = 'SELECT * FROM service_responses sr left join orders o on o.id = sr.order_id where order_status = 1 and accept_status = 0 and o.cleaner_id is null and sr.cleaner_id='.$cleaner['id'];
+        $query = 'SELECT * FROM service_responses sr left join orders o on o.id = sr.order_id where order_status = 1 and accept_status = 0 and time>"'.date("Y-m-d H:i").'" and o.cleaner_id is null and sr.cleaner_id='.$cleaner['id'].' order by time ';
         $orders = \DB::select($query);
         foreach ($orders as &$order) {
             $order->additional = json_decode($order->additional);
@@ -90,13 +92,16 @@ class CleanerController extends Controller
         $order = Order::where(["id"=>$data['order_id'],"cleaner_id"=>null,"order_status"=>1])->first();
         if ($order){
           $order->price = $cleaner['pay_rate']*$order['hours'];
+          
           $order->agent_fee = $order->price*0.1;
+          
+          $order->gst = $order->price*1.1*0.05;
           $order->cleaner_id = $cleaner['id'];
           $order->order_status = 2;
           $order->cleaner_rate = $cleaner['pay_rate'];
           
           $order->save();
-          sendSMS($order->phone, '您选择的Cleaner已经接受这个订单,请您尽快确认！详情请看订单细节！');
+          sendSMS($order->phone, 'Your cleaner has accepted the order, please confirm! Please refer to order form for details!');
           return response()->json(['success'=> true,'test'=>$response]);
         }else{
           return response()->json(['success'=> false,'test'=>$response]);
@@ -112,7 +117,7 @@ class CleanerController extends Controller
         if ($order){
           $order->order_status = 3;
           $order->save();
-          sendSMS($order['phone'], '修改时间订单被重新接受，请注意查看！');
+          sendSMS($order['phone'], 'Rescheduled order is accepted, please check!');
           return response()->json(['success'=> true]);
         }else{
           return response()->json(['success'=> false]);
@@ -129,8 +134,8 @@ class CleanerController extends Controller
           $order->order_status = 3;
           $order->cleaner_id = 6;
           $order->save();
-          sendSMS($order['phone'],"有修改时间订单被拒绝，并转交给VIP服务！");
-          sendSMS("6042838800","有修改时间订单被拒绝，并转交给VIP服务！");
+          sendSMS($order['phone'],"Your modified/rescheduled order has been rejected and transferred to our VIP service");
+          sendSMS("6042838800","Your modified/rescheduled order has been rejected and transferred to our VIP service");
           return response()->json(['success'=> true]);
         }else{
           return response()->json(['success'=> false]);
@@ -148,7 +153,7 @@ class CleanerController extends Controller
           $order->serve_time = date("Y-m-d H:i");
           $order->order_status = 5;
           $order->save();
-          sendSMS($order['phone'],"您有订单开始服务！");
+          sendSMS($order['phone'],"Your ordered service has started!");
           return response()->json(['success'=> true]);
         }else{
           return response()->json(['success'=> false]);
@@ -167,7 +172,7 @@ class CleanerController extends Controller
           $order->finish_time = date("Y-m-d H:i");
           $order->order_status = 6;
           $order->save();
-          sendSMS($order['phone'],"您有订单已经完成服务！");
+          sendSMS($order['phone'],"Your ordered service is finished!");
           return response()->json(['success'=> true]);
         }else{
           return response()->json(['success'=> false]);
@@ -178,7 +183,7 @@ class CleanerController extends Controller
         
         $data = json_decode(request()->getContent(), true);
         $cleaner = Cleaner::where(["user_id" => Auth::user()->id])->first();
-        $orders = Order::where(["cleaner_id" => $cleaner['id']])->whereIn('order_status',$data['status'])->orderBy('id', 'desc')
+        $orders = Order::where(["cleaner_id" => $cleaner['id']])->whereRaw('time > "'.date("Y-m-d H:i").'"')->whereIn('order_status',$data['status'])->orderBy('time', 'desc')
                   ->offset($data['offset'])->limit(10)->get();
         foreach ($orders as &$order) {
             $order['additional'] = json_decode($order['additional']);
@@ -231,8 +236,8 @@ class CleanerController extends Controller
         $unfinish_order = \DB::select($unfinish_order)[0];
         
         $wii_payment = 'SELECT sum(amount) as amount FROM `wii_payments` WHERE cleaner_id='.$cleaner['id'];
-        $wii_payment = \DB::select($wii_payment)[0];
-        return response()->json(['success'=> true, 'finish_order'=> $finish_order, "unfinish_order" => $unfinish_order, "wii_payment"=>$wii_payment== null? $wii_payment:"0"]);
+        $wii_payment = \DB::select($wii_payment)[0]->amount;
+        return response()->json(['success'=> true, 'finish_order'=> $finish_order, "unfinish_order" => $unfinish_order, "wii_payment"=>$wii_payment != null? $wii_payment:"0"]);
     }
   
     //提取wii_payment

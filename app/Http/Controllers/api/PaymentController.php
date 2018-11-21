@@ -28,7 +28,7 @@ public function postPayment()
                  $charge = $stripe->charges()->create([
                    "card" => $data["token"],
                    "currency" => "cad",
-                   "amount" => $order["price"] + $order["agent_fee"] ,
+                   "amount" => $order["price"] + $order["agent_fee"] +  $order["gst"],
                    "description" => "Add in wallet",
                  ]);
                  
@@ -38,8 +38,51 @@ public function postPayment()
                  */$order->order_status = 3;
                    $order->save();
                    Payment::create(['amount'=>($charge['amount']/100),'order_id'=>$data['order_id'],'payment_number'=>$charge["id"]]);
-                   sendSMS(getPhoneFromCleaner($order['cleaner_id']), '您有订单已支付，请注意安排时间！');
-                    return response()->json(['success'=> true,'charge'=>$charge,'message' => "支付成功, 支付金额".($charge['amount']/100)." ".strtoupper($charge['currency'])."."]); 
+                   sendSMS(getPhoneFromCleaner($order['cleaner_id']), 'You have a paid order, please remember scheduled appointment!');
+                    return response()->json(['success'=> true,'charge'=>$charge,'message' => "Payment done! Amount paid: ".($charge['amount']/100)." ".strtoupper($charge['currency'])."."]); 
+                 } else {
+
+                 return response()->json(['success'=> false,"error"=>"Money not add in wallet!!"]); 
+                 }
+         } catch (Exception $e) {
+          
+          return response()->json(['success'=> false,"error"=>$e->getMessage()]); 
+         } catch(\Cartalyst\Stripe\Exception\CardErrorException $e) {
+          
+          return response()->json(['success'=> false,"error"=>$e->getMessage()]); 
+         } catch(\Cartalyst\Stripe\Exception\MissingParameterException $e) {
+          
+          return response()->json(['success'=> false,"error"=>$e->getMessage()]); 
+         }
+     }
+ }
+  
+  
+  public function postPaymentForChange()
+ {
+     $data = json_decode(request()->getContent(), true);
+     $order = Order::where(["user_id" => Auth::user()->id, "id"=>$data['order_id']])->first();
+     
+     if (1) { 
+         try{
+                 $amount = number_format(($order["price"] + $order["agent_fee"] +  $order["gst"])*0.3, 1, ".", "");
+                 $stripe = Stripe::make("sk_test_JG33GZrsKjIFGHhYcolZD8w8");
+                 $charge = $stripe->charges()->create([
+                   "card" => $data["token"],
+                   "currency" => "cad",
+                   "amount" => $amount,
+                   "description" => "Add in wallet",
+                 ]);
+                 
+                 if($charge["status"] == "succeeded") {
+                 /**
+                 * Write Here Your Database insert logic.
+                 */$order->order_status = 4;
+                   $order->repay_amount = $amount;
+                   $order->save();
+                   Payment::create(['amount'=>($charge['amount']/100),'order_id'=>$data['order_id'],'payment_number'=>$charge["id"],'cleaner_id'=>$order['cleaner_id']]);
+                   sendSMS(getPhoneFromCleaner($order['cleaner_id']), 'You have a paid and changed order, please check changed order!');
+                    return response()->json(['success'=> true,'charge'=>$charge,'message' => "Payment done! Amount paid: ".($charge['amount']/100)." ".strtoupper($charge['currency'])."."]); 
                  } else {
 
                  return response()->json(['success'=> false,"error"=>"Money not add in wallet!!"]); 

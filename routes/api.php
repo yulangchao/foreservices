@@ -32,7 +32,7 @@ Route::group(['namespace' => 'api'], function () {
   
     Route::post('/sendcode', 'UserController@sendcode');
   
-  
+    Route::post('/checkUserExist', 'UserController@checkUserExist');
     Route::post('/register', 'UserController@register');
     Route::post('/forgetPassword', 'UserController@forgetPassword');
   
@@ -72,7 +72,7 @@ Route::group(['middleware' => 'auth:api', 'namespace' => 'api'], function() {
     Route::post('/changeOrderTime', 'OrderController@changeOrderTime');
     Route::post('/cancelOrder', 'OrderController@cancelOrder');
   
-  
+    Route::post('/postPaymentForChange', 'PaymentController@postPaymentForChange');
     Route::post('/postPayment', 'PaymentController@postPayment');
   
     Route::post('/changeUserSetting', 'UserController@changeUserSetting');

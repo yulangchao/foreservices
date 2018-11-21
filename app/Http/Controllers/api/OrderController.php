@@ -25,14 +25,17 @@ class OrderController extends Controller
         }else{
             $data['additional']=null;
         }
-        
+        $data['order_sn'] = time();
         $data['order_status'] = 1;
         $data['user_id'] = Auth::user()->id;
         if ($data['selected_cleaners'][0] == -1){
           $data['order_status'] = 2;
           $data['cleaner_id'] = 6;
           $data['price'] = $data['hours']*30;
+          $data['gst'] = $data['price']*0.05;
+          
         }
+        
         $order = Order::create($data);
         
         if ($order){
@@ -40,24 +43,32 @@ class OrderController extends Controller
             foreach ($data['selected_cleaners'] as &$value) {
                 $response = ['cleaner_id' => $value, 'order_id' => $order->id];
                 ServiceResponse::create($response);
-                sendSMS(getPhoneFromCleaner($value), '你有新的订单，请注意查收');
+                sendSMS(getPhoneFromCleaner($value), 'Please check for your new order!');
             }
           }else{
             
-            sendSMS("6042838800", '你有新的vip订单，请注意查收');
+            sendSMS("6042838800", 'Please check for your new VIP order!');
           }
           
-          return response()->json(['success'=> true, 'message'=> '订单创建成功！等待Cleaner回复！']);
+          return response()->json(['success'=> true, 'message'=> "Order created! Please wait for cleaner's reply!"]);
         }else{
-          return response()->json(['success'=> false, 'message'=> '订单创建失败！']);
+          return response()->json(['success'=> false, 'message'=> 'Order failed! Please try again!']);
         }
     }
     //提取所有单
     public function getOrdererList(Request $request){
         
         $data = json_decode(request()->getContent(), true);
-        $orders = Order::where(["user_id" => Auth::user()->id])->whereIn('order_status',$data['status'])->orderBy('id', 'desc')
+        $where['user_id'] = Auth::user()->id;
+        if ($data['status'][0]==1){
+        
+        $orders = Order::where($where)->whereRaw('time > "'.date("Y-m-d H:i").'"')->whereIn('order_status',$data['status'])->orderBy('time', 'desc')
                   ->offset($data['offset'])->limit(10)->get();
+        }else{
+        $orders = Order::where($where)->whereIn('order_status',$data['status'])->orderBy('time', 'desc')
+                  ->offset($data['offset'])->limit(10)->get();
+        }
+
         foreach ($orders as &$order) {
             $order['additional'] = json_decode($order['additional']);
         }
@@ -77,7 +88,7 @@ class OrderController extends Controller
         }
         if (!empty($data['price']) && $data['price'] > 0){
 //           $query ='select (acos(sin('.$data['lat'].'/57.2957795) * sin(c.Lat/57.2957795) + cos('.$data['lat'].'/57.2957795) * cos(c.Lat/57.2957795) * cos(c.Lng/57.2957795 - ( '.$data['lng'].'/57.2957795))) * 6371) as distance,name, phone,user_id,email,avatar,pay_rate,city,sex from cleaners c where city is not null and pay_rate between '.(5+5*$data['price']).' and '.(10+5*$data['price']).'  order by if_vip desc, distance asc, rate desc';
-          $cleaners = Cleaner::where($where)->whereNotNull('address')->whereNotNull('city')->whereBetween('pay_rate', [5+5*$data['price'], 10+5*$data['price']])->orderBy('if_vip', 'desc')->orderBy('rate', 'desc')->get();
+          $cleaners = Cleaner::where($where)->whereNotNull('address')->whereNotNull('city')->whereBetween('pay_rate', [14+4*$data['price'], 18+4*$data['price']])->orderBy('if_vip', 'desc')->orderBy('rate', 'desc')->get();
         }else{
 //           $query ='select (acos(sin('.$data['lat'].'/57.2957795) * sin(c.Lat/57.2957795) + cos('.$data['lat'].'/57.2957795) * cos(c.Lat/57.2957795) * cos(c.Lng/57.2957795 - ( '.$data['lng'].'/57.2957795))) * 6371) as distance,name, phone,user_id,email,avatar,pay_rate,city,sex from cleaners c where city is not null order by if_vip desc, distance asc, rate desc';
            $cleaners = Cleaner::where($where)->whereNotNull('address')->whereNotNull('city')->orderBy('if_vip', 'desc')->orderBy('rate', 'desc')->get();
@@ -131,15 +142,23 @@ class OrderController extends Controller
         
         $data = json_decode(request()->getContent(), true);
         $order = Order::where(["user_id" => Auth::user()->id, "id"=>$data['order_id']])->first();
-        $order->order_status = 4;
+      
+        if ((strtotime($order->time)-time())/3600 < 24){
+          $order->order_status = 10;
+        }else{
+          $order->order_status = 4;
+        }
+        
         $order->if_changed = 1;
         $order->time = $data['time'];
+        $order->start_time = substr($data['time'],11);
+        $order->end_time = getTimeFromMinutes(substr($data['time'],14,2)+substr($data['time'],11,2)*60 + $order->hours*60);
         $order->save();
         if ($order){
          
-          sendSMS(getPhoneFromCleaner($order['cleaner_id']), '您的订单时间改变，请及时查看确认！');
+          sendSMS(getPhoneFromCleaner($order['cleaner_id']), 'Please check to confirm your service time change and wait for re-paying!');
         }
-        return response()->json(['success'=> true]);
+        return response()->json(['success'=> true,'order_status' =>$order->order_status ]);
     }
   
   //取消订单
@@ -162,12 +181,12 @@ class OrderController extends Controller
 
           if ($order['order_status']==3 || $order['order_status']==4){
             //取消并且退款
-            sendSMS("6042838800", '此订单已经取消！需要退款!');
-            sendSMS(getPhoneFromCleaner($order['cleaner_id']), '您有订单已经取消，请注意查看！');
-            sendSMS($order['phone'],"您的订单已经取消！");
+            sendSMS("6042838800", 'This order has been cancelled! Please refund!');
+            sendSMS(getPhoneFromCleaner($order['cleaner_id']), 'Please check for the order cancellation!');
+            sendSMS($order['phone'],"Your order is cancelled!");
           }else{
             //取消
-            sendSMS($order['phone'],"您的订单已经取消！");
+            sendSMS($order['phone'],"Your order is cancelled!");
           }
           
         }

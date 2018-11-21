@@ -50,52 +50,38 @@ class UserController extends Controller
 //             curl_close ( $ch );
       
     }
-  
-    public function logout()
-    { 
-//         if (Auth::check()) {
-//            Auth::user()->AauthAcessToken()->delete();
-//         } 
-    }
-  
-  
-    public function checkPhone(Request $request)
+    public function forgetPassword()
     {
+        $data = json_decode(request()->getContent(), true);
+        $user = User::where('email', '=', $data['email'])->first();
+        if (!$user) {
+           return response()->json(['success'=>false, 'message' => 'Email does not exist!']);
+        }
       
-//         $credentials = $request->only('phone');
-      
-//         $rules = [
-//             'phone' => 'bail|required|digits:10|unique:users'
-//         ];
-//         $validator = Validator::make($credentials, $rules);
-      
-//         if($validator->fails()) {
-//             return response()->json(['success'=> false, 'error'=> $validator->messages()->first()]);
-//         } else {
-          
-//             $record = SmsRecord::where([ 'to'=>$request->phone])->orderBy('created_at', 'desc')->first();
-        
-//             if($record){
-//                if (time() - strtotime($record['created_at']) < 60){
-//                  return response()->json(['success'=> true,'message'=> '亲，注册验证码已发送, 1分钟内不能重发，如果未收到，请1分钟后再尝试']);
-//                }
-//             } 
-          
-          
-//             $verification_code = rand ( 1000 , 9999 );
-      
-//             try {
-//                   $test = Twilio::message(request('phone'), '傻逼鸽子王，验证码是'. $verification_code.'有效期30分钟');
-//             }
-//             catch (\Exception $e) {
-//                   return response()->json(['success' => false,'error' => "验证码发送失败"]);
-//             }
-
-//              $result = json_decode($test, true);
-//              SmsRecord::create(['status'=>$result['status'],'from'=>$result['from'],'to'=>request('phone'),'body'=>$result['body'], 'code'=>$verification_code]);
-//              return response()->json(['success'=> true, 'message' => "亲，你尚未注册，注册验证码已发送"]);
-//         }
+        $temp_password = str_random(8);
+        $user->password = Hash::make($temp_password);
+        $user->save();
+        try {
+            sendSMS($user->phone, 'Your new password is “'.$temp_password."”。");
+        }
+        catch (\Exception $e) {
+              return response()->json(['success' => false,'error' => "Send Failed! Please try again later!"]);
+        }
+        return response()->json(['success'=>true,'message' => 'New password is sent to your phone, Please change it as soon as possible!']);
     }
+  
+    public function checkUserExist(Request $request)
+    {
+
+        $data = json_decode(request()->getContent(), true);
+        $ifexist = User::where(['email' => $data['email']])->whereIn('type',[0,2])->first();
+        if ($ifexist){
+          return response()->json(['success'=> false, 'error'=> 'User Existed! Please Change Your Email.']);
+        }else{
+          return response()->json(['success'=> true]);
+        }
+    }
+ 
   //register
     public function register(Request $request)
     {
@@ -122,12 +108,14 @@ class UserController extends Controller
         $phone = $data['phone'];
         $email = $data['email'];
         $password = $data['password'];
-        
+        $pay_rate = $data['pay_rate'];
+        $work_years = $data['work_years'];
+        $images = $data['images'];
         $user = User::create(['name' => $name, 'tpye'=>0 , 'email' => $email, 'phone' => $phone, 'password' => Hash::make($password)]);
         
       
         if ($user){
-            $cleaner = Cleaner::create(['name' => $name, 'email' => $email, 'phone' => $phone,'user_id'=>$user->id]);
+            $cleaner = Cleaner::create(['name' => $name, 'email' => $email, 'phone' => $phone,'user_id'=>$user->id, 'id_image'=>$images,'pay_rate'=>$pay_rate, 'work_years'=>$work_years]);
           
             for ($x = 1; $x <= 7; $x++) {
                 CleanerSchedule::create(['day' => $x, 'start' => 8, 'end' => 18, 'active'=>0,'cleaner_id'=>$cleaner->id]);
@@ -190,7 +178,7 @@ class UserController extends Controller
         foreach ($saved_cleaners as &$saved_cleaner) {
             $results[] = $saved_cleaner['cleaner_id'];
         }
-        return response()->json(['success'=> true, 'message'=> '注册成功！', 'token'=>$token, 'user' => Auth::user(),'saved_cleaners'=>$results]);
+        return response()->json(['success'=> true, 'message'=> 'Congratualtions! You have registered successfully!', 'token'=>$token, 'user' => Auth::user(),'saved_cleaners'=>$results]);
     }
   
     public function changeUserSetting(Request $request)
@@ -212,16 +200,19 @@ class UserController extends Controller
         $user->name = $data['name'];
         $user->phone = $data['phone'];
         $user->avatar = $data['avatar'];
+        if ($data['password'] != ""){
+          $user->password = Hash::make($data['password']);
+        }
         $user->save();
         $cleaner = Cleaner::where(['user_id'=>Auth::user()->id])->first();
         $cleaner->name = $data['name'];
         $cleaner->phone = $data['phone'];
         $cleaner->avatar = $data['avatar'];
-        $cleaner->pay_rate = $data['pay_rate'];
-        $cleaner->city = $data['city'];
-        $cleaner->address = $data['address'];
-        $cleaner->lat = $data['lat'];
-        $cleaner->lng = $data['lng'];
+//         $cleaner->pay_rate = $data['pay_rate'];
+//         $cleaner->city = $data['city'];
+//         $cleaner->address = $data['address'];
+//         $cleaner->lat = $data['lat'];
+//         $cleaner->lng = $data['lng'];
         $cleaner->sex = 0;
         $cleaner->save();
         
@@ -301,7 +292,7 @@ class UserController extends Controller
         
         $data = json_decode(request()->getContent(), true);
       
-        $query = 'SELECT cr.*, u.name, u.avatar FROM client_reviews cr left join cleaners u on u.id = cr.cleaner_id where cr.user_id = '.$data['user_id'].' limit 10 OFFSET '. $data['offset'];
+        $query = 'SELECT cr.*, u.name, u.avatar FROM client_reviews cr left join cleaners u on u.id = cr.cleaner_id where cr.user_id = '.$data['user_id'].' order by created_at desc limit 10 OFFSET '. $data['offset'];
         $reviews = \DB::select($query);
 
         return response()->json(['success'=> true, 'reviews'=> $reviews]);

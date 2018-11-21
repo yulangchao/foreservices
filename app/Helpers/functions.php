@@ -40,9 +40,24 @@ function getTimeFromMinutes($time){
   return $hour.":".$min;
 }
 
+function getEndTime($time,$hours){
+  $hour = substr($time,11,2)+ $hours;
+  if($hour<10){
+    $hour = "0".$hour;
+  }
+  $min  = substr($time,14,2);
+
+  return $hour.":".$min;
+}
+
 function getPhoneFromCleaner($id){
   $phone = DB::table('cleaners')->where('id', $id)->value('phone');
   return $phone;
+}
+
+function getNameFromCleaner($id){
+  $name = DB::table('cleaners')->where('id', $id)->value('name');
+  return $name;
 }
 
 
