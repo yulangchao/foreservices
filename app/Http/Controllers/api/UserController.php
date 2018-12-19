@@ -26,12 +26,13 @@ class UserController extends Controller
     }
     public function test1()
     {
-        $template = "IGtNotificationTemplate";
-        $data = "a";
-        $config = array("type" => "HIGH", "title" => "你有一条新消息", "body" => "你有一个3000元的订单需要申请","logo"=>"","logourl"=>"");
-        $CID = "2fa21266d3865b9777a3df1d86607b88";
-        $test = Getui::pushMessageToSingle($template,$config,$data,$CID);
-        return response()->json(['user' => $test]);
+        sendSMS(6047195215, "123");
+        // $template = "IGtNotificationTemplate";
+        // $data = "a";
+        // $config = array("type" => "HIGH", "title" => "你有一条新消息", "body" => "你有一个3000元的订单需要申请","logo"=>"","logourl"=>"");
+        // $CID = "2fa21266d3865b9777a3df1d86607b88";
+        // $test = Getui::pushMessageToSingle($template,$config,$data,$CID);
+        // return response()->json(['user' => $test]);
 //             $to_uid = '';
 //             // 推送的url地址，上线时改成自己的服务器地址
 //             $push_api_url = "http://foreclean.tk:2121/";

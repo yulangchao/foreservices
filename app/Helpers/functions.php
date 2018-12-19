@@ -3,7 +3,7 @@
 
 
 use Illuminate\Support\Facades\DB;
-use Twilio;
+use \Twilio as Twilio;
 use App\SmsRecord;
 use App\CleanerReview;
 
